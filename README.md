@@ -38,6 +38,23 @@ The second model scores lower because of the data, not the training: Pl@ntNet
 is field photos taken on phones, with a long tail of rare species — its
 average over species is only 55.5%.
 
+### Pretrained weights
+
+If you would rather not train anything, take the graphs from the latest
+release — the descriptions that go with them are already in the repository:
+
+```bash
+curl -L -o model/flowers102.onnx \
+  https://github.com/issToma/what-the-flower/releases/latest/download/flowers102.onnx
+curl -L -o model/plantnet100.onnx \
+  https://github.com/issToma/what-the-flower/releases/latest/download/plantnet100.onnx
+```
+
+Either file is about 90 MB, and one of them is enough to get the site
+answering.
+
+### Training your own
+
 Open a notebook in Colab, enable the GPU (`Runtime` → `Change runtime type`)
 and `Run all`. At the end it offers two files to download — drop them into
 `model/` as they are:
