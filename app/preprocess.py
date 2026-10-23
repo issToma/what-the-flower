@@ -19,13 +19,18 @@ MAX_PIXELS = 40_000_000
 
 
 class BadImageError(ValueError):
-    """Файл не является изображением, повреждён или неприемлемо велик."""
+    """Файл не является изображением, повреждён или неприемлемо велик.
+
+    Текст сообщения — запасной вариант: интерфейс показывает собственный
+    перевод по коду ошибки, а сюда смотрят только те, кто обращается
+    к API напрямую, поэтому он английский.
+    """
 
 
 def _too_large(size: str) -> BadImageError:
     return BadImageError(
-        f"изображение слишком большое ({size}), "
-        f"допустимо до {MAX_PIXELS // 1_000_000} мегапикселей"
+        f"image is too large ({size}), the limit is "
+        f"{MAX_PIXELS // 1_000_000} megapixels"
     )
 
 
@@ -34,9 +39,9 @@ def load_image(raw: bytes) -> Image.Image:
         image = Image.open(io.BytesIO(raw))
     except Image.DecompressionBombError as exc:
         # Pillow сам отказывается открывать совсем уж гигантские файлы.
-        raise _too_large("отказался открывать даже Pillow") from exc
+        raise _too_large("rejected by Pillow itself") from exc
     except (UnidentifiedImageError, OSError) as exc:
-        raise BadImageError("не удалось прочитать изображение") from exc
+        raise BadImageError("could not read the image") from exc
 
     # Заголовок уже прочитан, пиксели ещё нет — проверяем размер до распаковки.
     width, height = image.size
@@ -46,7 +51,7 @@ def load_image(raw: bytes) -> Image.Image:
     try:
         image.load()
     except OSError as exc:
-        raise BadImageError("не удалось прочитать изображение") from exc
+        raise BadImageError("could not read the image") from exc
 
     # Фотографии с телефона несут поворот в EXIF; без этого модель
     # получает картинку, лежащую на боку.

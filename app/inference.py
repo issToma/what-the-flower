@@ -23,9 +23,9 @@ TOP_K = 3
 UNCERTAIN_BELOW = 0.25
 
 NO_MODELS = (
-    "ни одной модели не найдено: в папке model/ нужна пара файлов с общим "
-    "именем, например flowers102.onnx и flowers102.labels.json. Запусти "
-    "ноутбук из notebooks/ в Colab и положи файлы туда."
+    "no models found: model/ needs a pair of files sharing a name, "
+    "for example flowers102.onnx and flowers102.labels.json. "
+    "Run a notebook from notebooks/ in Colab and put the files there."
 )
 
 
@@ -82,8 +82,9 @@ class Classifier:
         actual_classes = self.session.get_outputs()[0].shape[-1]
         if isinstance(actual_classes, int) and actual_classes != len(self.classes):
             raise ModelNotReady(
-                f"модель отдаёт {actual_classes} классов, а в описании их "
-                f"{len(self.classes)} — файлы из разных прогонов"
+                f"the graph returns {actual_classes} classes but the "
+                f"description lists {len(self.classes)} — the files come "
+                f"from different runs"
             )
 
     def predict(self, raw: bytes) -> tuple[list[Prediction], float]:

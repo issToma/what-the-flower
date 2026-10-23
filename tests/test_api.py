@@ -60,6 +60,7 @@ def test_unknown_model_rejected(client):
         data={"model": "../../etc/passwd"},
     )
     assert response.status_code == 404
+    assert response.json()["code"] == "unknown_model"
 
 
 def test_predict_returns_sorted_top3_probabilities(client):
@@ -76,17 +77,20 @@ def test_predict_returns_sorted_top3_probabilities(client):
 def test_non_image_content_type_rejected(client):
     response = client.post("/api/predict", files={"image": ("a.txt", b"hello", "text/plain")})
     assert response.status_code == 415
+    assert response.json()["code"] == "not_an_image"
 
 
 def test_corrupted_image_rejected(client):
     response = client.post("/api/predict", files={"image": ("a.png", b"\x89PNG broken", "image/png")})
     assert response.status_code == 400
+    assert response.json()["code"] == "bad_image"
 
 
 def test_oversized_upload_rejected(client):
     oversized = b"\x89PNG" + b"0" * (10 * 1024 * 1024)
     response = client.post("/api/predict", files={"image": ("big.png", oversized, "image/png")})
     assert response.status_code == 413
+    assert response.json()["code"] == "too_large"
 
 
 def test_oversized_body_rejected_before_parsing(client):
@@ -102,6 +106,7 @@ def test_oversized_body_rejected_before_parsing(client):
 def test_empty_upload_rejected(client):
     response = client.post("/api/predict", files={"image": ("empty.png", b"", "image/png")})
     assert response.status_code == 400
+    assert response.json()["code"] == "empty_file"
 
 
 def test_missing_model_yields_503(monkeypatch):
@@ -111,7 +116,7 @@ def test_missing_model_yields_503(monkeypatch):
     response = TestClient(main.app).post(
         "/api/predict", files={"image": ("f.png", png_bytes(), "image/png")})
     assert response.status_code == 503
-    assert "веса не найдены" in response.json()["detail"]
+    assert response.json()["code"] == "no_models"
 
 
 def test_mismatched_labels_are_detected(model_dir, tmp_path):
@@ -123,7 +128,7 @@ def test_mismatched_labels_are_detected(model_dir, tmp_path):
     meta["classes"] = meta["classes"][:10]
     broken.write_text(json.dumps(meta))
 
-    with pytest.raises(ModelNotReady, match="разных прогонов"):
+    with pytest.raises(ModelNotReady, match="different runs"):
         Classifier(model_dir / "model.onnx", broken)
 
 
@@ -149,7 +154,8 @@ def test_decompression_bomb_rejected(client):
 
     response = client.post("/api/predict", files={"image": ("bomb.png", raw, "image/png")})
     assert response.status_code == 400
-    assert "слишком большое" in response.json()["detail"]
+    assert response.json()["code"] == "bad_image"
+    assert "too large" in response.json()["detail"]
 
 
 def test_errors_do_not_leak_server_paths(monkeypatch):

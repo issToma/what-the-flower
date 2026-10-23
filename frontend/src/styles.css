@@ -93,6 +93,40 @@ body {
   fill: var(--surface-1);
 }
 
+/* Переключатель языка: два состояния, поэтому не выпадающий список,
+   а пара кнопок — выбор виден без раскрытия. */
+.lang-switch {
+  margin-inline-start: auto;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.lang-switch button {
+  padding: 3px 9px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.lang-switch button:hover {
+  color: var(--text-primary);
+}
+
+.lang-switch button.is-active {
+  color: #ffffff;
+  background: var(--series-1);
+}
+
 .header h1 {
   margin: 0;
   font-size: 17px;

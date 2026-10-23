@@ -1,5 +1,7 @@
 import { useRef } from "react";
 
+import { useT } from "../i18n.js";
+
 function UploadIcon() {
   return (
     <svg
@@ -21,6 +23,7 @@ function UploadIcon() {
 
 export default function Composer({ onPick, disabled, dragging, busy }) {
   const inputRef = useRef(null);
+  const t = useT();
 
   function handleChange(event) {
     const [file] = event.target.files;
@@ -29,8 +32,6 @@ export default function Composer({ onPick, disabled, dragging, busy }) {
     event.target.value = "";
   }
 
-  const state = dragging ? " dropzone--active" : "";
-
   return (
     <div className="composer">
       <input ref={inputRef} type="file" accept="image/*" onChange={handleChange} hidden />
@@ -38,20 +39,16 @@ export default function Composer({ onPick, disabled, dragging, busy }) {
       {/* Кнопка, а не div: клавиатура, фокус и Enter работают сами собой. */}
       <button
         type="button"
-        className={`dropzone${state}`}
+        className={`dropzone${dragging ? " dropzone--active" : ""}`}
         onClick={() => inputRef.current?.click()}
         disabled={disabled}
       >
         <UploadIcon />
         <span className="dropzone-title">
-          {busy
-            ? "Смотрю на фотографию…"
-            : dragging
-              ? "Отпусти — сейчас посмотрю"
-              : "Перетащи фотографию цветка сюда"}
+          {busy ? t.dropBusy : dragging ? t.dropActive : t.dropIdle}
         </span>
         <span className="dropzone-hint">
-          или нажми, чтобы выбрать файл · вставь из буфера <kbd>Ctrl</kbd>+<kbd>V</kbd>
+          {t.dropClick} · {t.dropPaste} <kbd>Ctrl</kbd>+<kbd>V</kbd>
         </span>
       </button>
     </div>

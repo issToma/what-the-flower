@@ -1,15 +1,16 @@
-# Определитель цветов
+# Flower identifier
 
-Присылаешь фотографию цветка — получаешь название вида и три самых вероятных
-варианта с вероятностями. Модель обучается в Google Colab на GPU, а работает
-на обычном процессоре: в зависимостях сервера нет ни torch, ни torchvision,
-только `onnxruntime`.
+Send a photo of a flower and get its species back, with the three most likely
+candidates and their probabilities. The model is trained in Google Colab on a
+GPU but runs on an ordinary CPU: the server depends on `onnxruntime` alone —
+neither torch nor torchvision is installed. The interface speaks English and
+Russian.
 
-![Интерфейс](docs/screenshot.png)
+![Interface](docs/screenshot.png)
 
-## Запуск
+## Running it
 
-Нужны Python 3.11+, Node 20+ и [uv](https://docs.astral.sh/uv/).
+You need Python 3.11+, Node 20+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync
@@ -17,27 +18,27 @@ cd frontend && npm install && npm run build && cd ..
 uv run uvicorn app.main:app --port 8000
 ```
 
-Открыть http://127.0.0.1:8000 — FastAPI раздаёт собранный фронтенд сам.
+Open http://127.0.0.1:8000 — FastAPI serves the built frontend itself.
 
-Без весов в `model/` сайт откроется, но скажет, что модели нет. Как их
-получить — следующий раздел.
+With no weights in `model/` the page still opens and says the model is
+missing. The next section is about getting them.
 
-## Модели
+## Models
 
-Обучение вынесено в два ноутбука для Colab:
+Training lives in two Colab notebooks:
 
-| Ноутбук | Датасет | Видов | top-1 | Время на T4 |
+| Notebook | Dataset | Species | top-1 | Time on a T4 |
 |---|---|---|---|---|
-| `train_flowers102_colab.ipynb` | Flowers-102 | 102 | 95.3% | ~10 мин |
-| `train_plantnet100_colab.ipynb` | Pl@ntNet-300K, срез | 100 | 79.2% | ~40 мин |
+| `train_flowers102_colab.ipynb` | Flowers-102 | 102 | 95.3% | ~10 min |
+| `train_plantnet100_colab.ipynb` | Pl@ntNet-300K, a slice | 100 | 79.2% | ~40 min |
 
-У второй модели точность ниже не из-за обучения, а из-за данных: Pl@ntNet —
-полевые фотографии с телефонов и длинным хвостом редких видов, среднее по
-видам там всего 55.5%.
+The second model scores lower because of the data, not the training: Pl@ntNet
+is field photos taken on phones, with a long tail of rare species — its
+average over species is only 55.5%.
 
-Открыть ноутбук в Colab, включить GPU (`Runtime` → `Change runtime type`),
-выполнить `Run all`. В конце он предложит скачать два файла — положить их
-в `model/` как есть:
+Open a notebook in Colab, enable the GPU (`Runtime` → `Change runtime type`)
+and `Run all`. At the end it offers two files to download — drop them into
+`model/` as they are:
 
 ```
 model/
@@ -45,36 +46,36 @@ model/
   plantnet100.onnx + plantnet100.labels.json
 ```
 
-Моделей может быть сколько угодно, каждая — пара файлов с общим именем. Если
-их больше одной, в шапке появляется выбор; подпись берётся из поля `dataset`
-внутри описания. Новую модель сервер заметит после перезапуска.
+There can be any number of models, each a pair of files sharing a name. With
+more than one the header grows a picker; the label comes from the `dataset`
+field inside the description. A newly added model is picked up on restart.
 
-## Как устроено
+## How it works
 
 ```
-app/         FastAPI: препроцессинг, инференс, API
-frontend/    React + Vite: чат
-notebooks/   обучение и экспорт в ONNX
-model/       веса (в репозиторий не кладутся)
-tests/       препроцессинг, контракт API, регрессии по безопасности
+app/         FastAPI: preprocessing, inference, API
+frontend/    React + Vite: the chat
+notebooks/   training and ONNX export
+model/       weights (never committed)
+tests/       preprocessing, API contract, security regressions
 ```
 
-Нормализация и softmax встроены прямо в ONNX-граф, поэтому серверу остаётся
-только уменьшить картинку и вырезать центр — препроцессинг не может разойтись
-с тем, что было при обучении. Ноутбук проверяет это перед выгрузкой, сверяя
-выходы torch и onnxruntime на одном батче.
+ImageNet normalisation and softmax are baked into the ONNX graph, so the
+server only has to resize the image and crop the centre — preprocessing
+cannot drift away from what training did. The notebook verifies this before
+exporting, comparing torch and onnxruntime outputs on one batch.
 
-Инференс занимает около 100 мс и выполняется в пуле потоков, поэтому
-параллельные запросы не ждут друг друга. Графы загружаются при первом
-обращении: каждый весит около 100 МБ в памяти.
+Inference takes about 100 ms and runs in a thread pool, so parallel requests
+do not queue behind each other. Graphs are loaded on first use: each one takes
+around 100 MB of memory.
 
 ## API
 
-| Метод | Путь | |
+| Method | Path | |
 |---|---|---|
-| `GET` | `/api/health` | готовность и число найденных моделей |
-| `GET` | `/api/models` | список моделей с архитектурой, числом классов и точностью |
-| `POST` | `/api/predict` | `multipart/form-data`: `image` и необязательное `model` |
+| `GET` | `/api/health` | readiness and the number of models found |
+| `GET` | `/api/models` | models with architecture, class count and accuracy |
+| `POST` | `/api/predict` | `multipart/form-data`: `image` and optional `model` |
 
 ```json
 {
@@ -85,42 +86,49 @@ tests/       препроцессинг, контракт API, регресси�
 }
 ```
 
-`uncertain` поднимается, когда лучший вариант набрал меньше 0.25: модель знает
-только свой список видов и для постороннего снимка всё равно назовёт три
-штуки, так что интерфейс предупреждает об этом явно.
+`uncertain` is raised when the best guess scores below 0.25: a model only
+knows its own list of species and will still name three of them for an
+unrelated photo, so the interface says so out loud.
 
-## Разработка
+Errors carry a machine-readable `code` next to the English `detail`, which is
+what lets the interface show them in the language the visitor picked:
 
-Бэкенд с перезагрузкой и Vite в соседнем терминале (он проксирует `/api` на
-8000, поэтому CORS не нужен):
+```json
+{"code": "too_large", "detail": "the file is larger than 10 MB"}
+```
+
+## Development
+
+The backend with reload, and Vite in another terminal (it proxies `/api` to
+port 8000, so no CORS setup is needed):
 
 ```bash
 uv run uvicorn app.main:app --reload --port 8000
 cd frontend && npm run dev              # http://127.0.0.1:5173
 ```
 
-Тесты идут и без обученных весов — они собирают игрушечную ONNX-модель с тем
-же контрактом. Их же гоняет GitHub Actions на каждый push.
+The tests run without trained weights — they build a toy ONNX model with the
+same contract. GitHub Actions runs them on every push.
 
 ```bash
 uv sync --group dev
 uv run pytest
 ```
 
-## Если открывать наружу
+## Before exposing it to the internet
 
-Проект рассчитан на локальный запуск: `uvicorn` слушает `127.0.0.1`,
-аутентификации и ограничения частоты запросов нет. Снаружи понадобятся
-обратный прокси с лимитом на размер тела (`client_max_body_size 10m`) и rate
-limit — один инференс занимает около 100 мс процессорного времени.
+This is meant to run locally: `uvicorn` listens on `127.0.0.1`, and there is
+no authentication and no rate limiting. Facing the internet it needs a reverse
+proxy with a body size limit (`client_max_body_size 10m`) and a rate limit —
+one inference costs about 100 ms of CPU time.
 
-И ещё: чужой файл `.onnx` — это не данные, а исполняемый граф. Доверять ему
-нужно так же, как коду.
+One more thing: somebody else's `.onnx` file is not data, it is an executable
+graph. Trust it the way you would trust code.
 
-## Лицензии
+## Licences
 
-Код — MIT. Датасеты принадлежат их авторам и распространяются на собственных
-условиях: [Flowers-102](https://www.robots.ox.ac.uk/~vgg/data/flowers/102/)
-(Visual Geometry Group, Оксфорд) и
-[Pl@ntNet-300K](https://zenodo.org/records/4726653) (CC BY-SA 4.0). Обученные
-на них веса под лицензию этого репозитория не подпадают.
+The code is MIT. The datasets belong to their authors and come with their own
+terms: [Flowers-102](https://www.robots.ox.ac.uk/~vgg/data/flowers/102/)
+(Visual Geometry Group, Oxford) and
+[Pl@ntNet-300K](https://zenodo.org/records/4726653) (CC BY-SA 4.0). Weights
+trained on them are not covered by this repository's licence.

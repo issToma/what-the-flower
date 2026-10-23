@@ -1,3 +1,5 @@
+import { useT } from "../i18n.js";
+
 const percent = (probability) => `${(probability * 100).toFixed(1)}%`;
 
 /**
@@ -6,20 +8,19 @@ const percent = (probability) => `${(probability * 100).toFixed(1)}%`;
  * лидера выделяет типографика, а не отдельный оттенок.
  */
 export default function Prediction({ result, modelName }) {
+  const t = useT();
   const [best] = result.top;
 
   return (
     <div className="prediction">
-      {result.uncertain && (
+      {result.uncertain ? (
         <p className="uncertain" role="status">
           <span aria-hidden="true">⚠</span>
-          Не уверен, что это один из видов, которые я знаю. Вот самые близкие варианты:
+          {t.uncertain}
         </p>
-      )}
-
-      {!result.uncertain && (
+      ) : (
         <p className="lead">
-          Похоже на <strong>{best.label}</strong>
+          {t.lead} <strong>{best.label}</strong>
         </p>
       )}
 
@@ -40,7 +41,7 @@ export default function Prediction({ result, modelName }) {
 
       <p className="meta">
         {modelName && <>{modelName} · </>}
-        {result.latency_ms} мс на CPU
+        {t.latency(result.latency_ms)}
       </p>
     </div>
   );

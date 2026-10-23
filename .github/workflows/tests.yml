@@ -19,12 +19,12 @@ jobs:
           enable-cache: true
           python-version: ${{ matrix.python }}
 
-      - name: Установить зависимости
+      - name: Install dependencies
         run: uv sync --group dev
 
       # Веса не лежат в репозитории; тесты собирают игрушечную ONNX-модель
       # с тем же контрактом, поэтому обучение для них не нужно.
-      - name: Прогнать тесты
+      - name: Run tests
         run: uv run pytest -q
 
   frontend:

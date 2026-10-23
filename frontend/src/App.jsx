@@ -4,19 +4,17 @@ import Composer from "./components/Composer.jsx";
 import Header from "./components/Header.jsx";
 import Message from "./components/Message.jsx";
 import { fetchModels, predict } from "./api.js";
+import { LangContext, STRINGS, detectLang, rememberLang } from "./i18n.js";
 
-const GREETING = {
-  id: "greeting",
-  role: "assistant",
-  text:
-    "Привет. Пришли фотографию цветка, и я назову его вид — " +
-    "из тех, что знаю по выбранной модели.",
-};
+// Тексты хранятся ключами, а не строками: язык можно переключить
+// в любой момент, и уже отправленные сообщения тоже переведутся.
+const GREETING = { id: "greeting", role: "assistant", textKey: "greeting" };
 
 let nextId = 1;
 const makeId = () => `m${nextId++}`;
 
 export default function App() {
+  const [lang, setLang] = useState(detectLang);
   const [messages, setMessages] = useState([GREETING]);
   const [models, setModels] = useState([]);
   const [selected, setSelected] = useState("");
@@ -31,8 +29,14 @@ export default function App() {
         setModels(list);
         setSelected(fallback);
       })
-      .catch((exc) => setError(exc.message));
+      .catch((exc) => setError(exc.code ?? "network"));
   }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.title = STRINGS[lang].title;
+    rememberLang(lang);
+  }, [lang]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -68,7 +72,7 @@ export default function App() {
         setMessages((previous) =>
           previous.map((message) =>
             message.id === pendingId
-              ? { ...message, pending: false, error: exc.message }
+              ? { ...message, pending: false, errorCode: exc.code, errorText: exc.message }
               : message,
           ),
         );
@@ -83,7 +87,7 @@ export default function App() {
     setSelected(id);
     setMessages((previous) => [
       ...previous,
-      { id: makeId(), role: "system", text: `Переключился на «${nameOf(id)}»` },
+      { id: makeId(), role: "system", system: { key: "switched", arg: nameOf(id) } },
     ]);
   }
 
@@ -104,43 +108,47 @@ export default function App() {
   }
 
   return (
-    <div
-      className={`app${dragging ? " app--dragging" : ""}`}
-      onDragOver={(event) => {
-        event.preventDefault();
-        setDragging(true);
-      }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={handleDrop}
-    >
-      <Header
-        models={models}
-        selected={selected}
-        onSelect={switchModel}
-        error={error}
-        busy={busy}
-      />
-
-      <main className="chat">
-        {messages.map((message) => (
-          <Message
-            key={message.id}
-            message={message}
-            modelName={models.length > 1 ? nameOf(message.result?.model) : null}
-            onRelease={releaseUrl}
-          />
-        ))}
-        <div ref={endRef} />
-      </main>
-
-      <footer className="footer">
-        <Composer
-          onPick={send}
-          disabled={busy || !selected}
-          dragging={dragging}
+    <LangContext.Provider value={lang}>
+      <div
+        className={`app${dragging ? " app--dragging" : ""}`}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+      >
+        <Header
+          models={models}
+          selected={selected}
+          onSelect={switchModel}
+          lang={lang}
+          onLang={setLang}
+          error={error}
           busy={busy}
         />
-      </footer>
-    </div>
+
+        <main className="chat">
+          {messages.map((message) => (
+            <Message
+              key={message.id}
+              message={message}
+              modelName={models.length > 1 ? nameOf(message.result?.model) : null}
+              onRelease={releaseUrl}
+            />
+          ))}
+          <div ref={endRef} />
+        </main>
+
+        <footer className="footer">
+          <Composer
+            onPick={send}
+            disabled={busy || !selected}
+            dragging={dragging}
+            busy={busy}
+          />
+        </footer>
+      </div>
+    </LangContext.Provider>
   );
 }

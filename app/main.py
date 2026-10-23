@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
@@ -24,6 +24,20 @@ MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
 state: dict[str, Registry | str | None] = {"registry": None, "error": None}
+
+
+class ApiError(Exception):
+    """Ошибка с машиночитаемым кодом.
+
+    Интерфейс поддерживает два языка и подставляет собственный текст по
+    `code`; английский `detail` остаётся запасным вариантом для тех, кто
+    обращается к API напрямую.
+    """
+
+    def __init__(self, status: int, code: str, detail: str):
+        self.status = status
+        self.code = code
+        self.detail = detail
 
 
 @asynccontextmanager
@@ -45,6 +59,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Определитель цветов", lifespan=lifespan)
 
 
+@app.exception_handler(ApiError)
+async def api_error_handler(request: Request, exc: ApiError) -> JSONResponse:
+    return JSONResponse({"code": exc.code, "detail": exc.detail}, status_code=exc.status)
+
+
 @app.middleware("http")
 async def reject_oversized_bodies(request: Request, call_next):
     """Отсечь слишком большое тело до разбора multipart.
@@ -56,14 +75,17 @@ async def reject_oversized_bodies(request: Request, call_next):
     """
     declared = request.headers.get("content-length")
     if declared and declared.isdigit() and int(declared) > MAX_UPLOAD_BYTES:
-        return JSONResponse({"detail": "файл больше 10 МБ"}, status_code=413)
+        return JSONResponse(
+            {"code": "too_large", "detail": "the file is larger than 10 MB"},
+            status_code=413,
+        )
     return await call_next(request)
 
 
 def get_registry() -> Registry:
     registry = state["registry"]
     if registry is None:
-        raise HTTPException(status_code=503, detail=state["error"] or "модель не загружена")
+        raise ApiError(503, "no_models", state["error"] or "no model loaded")
     return registry
 
 
@@ -88,13 +110,13 @@ async def models():
 async def predict(image: UploadFile = File(...), model: str | None = Form(None)):
     if image.content_type and not image.content_type.startswith("image/"):
         # Содержимое заголовка в ответ не возвращаем: это ввод клиента.
-        raise HTTPException(status_code=415, detail="ожидалось изображение")
+        raise ApiError(415, "not_an_image", "expected an image")
 
     raw = await image.read(MAX_UPLOAD_BYTES + 1)
     if len(raw) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=413, detail="файл больше 10 МБ")
+        raise ApiError(413, "too_large", "the file is larger than 10 MB")
     if not raw:
-        raise HTTPException(status_code=400, detail="пустой файл")
+        raise ApiError(400, "empty_file", "the file is empty")
 
     registry = get_registry()
 
@@ -105,12 +127,12 @@ async def predict(image: UploadFile = File(...), model: str | None = Form(None))
     try:
         classifier = await run_in_threadpool(registry.get, model)
     except UnknownModel as exc:
-        raise HTTPException(status_code=404, detail=f"нет модели «{model}»") from exc
+        raise ApiError(404, "unknown_model", "no such model") from exc
 
     try:
         top, latency_ms = await run_in_threadpool(classifier.predict, raw)
     except BadImageError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise ApiError(400, "bad_image", str(exc)) from exc
 
     return {
         "model": model or registry.default_id,
