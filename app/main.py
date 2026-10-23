@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from dataclasses import asdict
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 
 from app.inference import (
     MODEL_DIR,
@@ -26,8 +28,9 @@ state: dict[str, Registry | str | None] = {"registry": None, "error": None}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Модель грузим один раз на старте. Её отсутствие не должно ронять
-    # сервер: интерфейс обязан открыться и внятно сказать, чего не хватает.
+    # На старте только читаем описания моделей, сами графы грузятся позже,
+    # при первом запросе. Отсутствие моделей не должно ронять сервер:
+    # интерфейс обязан открыться и внятно сказать, чего не хватает.
     try:
         registry = Registry()
         state["registry"] = registry
@@ -39,7 +42,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Flowers-102 classifier", lifespan=lifespan)
+app = FastAPI(title="Определитель цветов", lifespan=lifespan)
 
 
 @app.middleware("http")
@@ -76,7 +79,7 @@ async def health():
 async def models():
     registry = get_registry()
     return {
-        "models": [info.as_dict() for info in registry.infos],
+        "models": [asdict(info) for info in registry.infos],
         "default": registry.default_id,
     }
 
@@ -94,13 +97,18 @@ async def predict(image: UploadFile = File(...), model: str | None = Form(None))
         raise HTTPException(status_code=400, detail="пустой файл")
 
     registry = get_registry()
+
+    # И первая загрузка графа (около 100 МБ), и сам инференс (около 150 мс)
+    # блокируют поток. В обработчике async это остановило бы весь цикл
+    # событий, поэтому уводим обе операции в пул потоков: onnxruntime на
+    # время счёта отпускает GIL.
     try:
-        classifier = registry.get(model)
+        classifier = await run_in_threadpool(registry.get, model)
     except UnknownModel as exc:
         raise HTTPException(status_code=404, detail=f"нет модели «{model}»") from exc
 
     try:
-        top, latency_ms = classifier.predict(raw)
+        top, latency_ms = await run_in_threadpool(classifier.predict, raw)
     except BadImageError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

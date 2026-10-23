@@ -6,14 +6,14 @@ const percent = (probability) => `${(probability * 100).toFixed(1)}%`;
  * лидера выделяет типографика, а не отдельный оттенок.
  */
 export default function Prediction({ result, modelName }) {
-  const [best, ...rest] = result.top;
+  const [best] = result.top;
 
   return (
     <div className="prediction">
       {result.uncertain && (
         <p className="uncertain" role="status">
           <span aria-hidden="true">⚠</span>
-          Не уверен, что это один из цветов, которые я знаю. Вот самые близкие варианты:
+          Не уверен, что это один из видов, которые я знаю. Вот самые близкие варианты:
         </p>
       )}
 
@@ -24,7 +24,7 @@ export default function Prediction({ result, modelName }) {
       )}
 
       <ol className="bars">
-        {[best, ...rest].map((item) => (
+        {result.top.map((item) => (
           <li key={item.label} className="bar-row">
             <span className="bar-label">{item.label}</span>
             <span className="bar-track" title={`${item.label}: ${percent(item.probability)}`}>

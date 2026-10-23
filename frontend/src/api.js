@@ -7,12 +7,6 @@ async function detail(response, fallback) {
   }
 }
 
-export async function fetchHealth() {
-  const response = await fetch("/api/health");
-  if (!response.ok) throw new Error("сервер не отвечает");
-  return response.json();
-}
-
 export async function fetchModels() {
   const response = await fetch("/api/models");
   if (!response.ok) throw new Error(await detail(response, "модели недоступны"));

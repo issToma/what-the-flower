@@ -20,9 +20,8 @@ dependencies = [
     "numpy>=2",
 ]
 
-# torch здесь намеренно отсутствует: обучение живёт в
-# notebooks/train_flowers102_colab.ipynb и выполняется в Colab,
-# а рантайму достаточно onnxruntime.
+# torch здесь намеренно отсутствует: обучение живёт в ноутбуках из
+# notebooks/ и выполняется в Colab, а рантайму достаточно onnxruntime.
 
 [dependency-groups]
 dev = [
