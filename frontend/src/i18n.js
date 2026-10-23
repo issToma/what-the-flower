@@ -4,7 +4,7 @@ export const LANGS = ["ru", "en"];
 
 export const STRINGS = {
   ru: {
-    title: "Определитель цветов",
+    title: "What the flower?",
     greeting:
       "Привет. Пришли фотографию цветка, и я назову его вид — " +
       "из тех, что знаю по выбранной модели.",
@@ -35,7 +35,7 @@ export const STRINGS = {
     },
   },
   en: {
-    title: "Flower identifier",
+    title: "What the flower?",
     greeting:
       "Hi. Send a photo of a flower and I will name its species — " +
       "from the list the selected model knows.",

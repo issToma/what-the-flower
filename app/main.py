@@ -56,7 +56,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Определитель цветов", lifespan=lifespan)
+app = FastAPI(title="What the flower?", lifespan=lifespan)
 
 
 @app.exception_handler(ApiError)
