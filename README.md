@@ -1,4 +1,4 @@
-# Flower identifier
+# What the flower?
 
 Send a photo of a flower and get its species back, with the three most likely
 candidates and their probabilities. The model is trained in Google Colab on a
