@@ -1,0 +1,419 @@
+/* Палитра: слот 1 (blue) как единственная серия — полосы кодируют вероятность,
+   а не ранг, поэтому цвет у них один. Тёмная тема — отдельные шаги той же
+   шкалы, а не инверсия светлой. */
+:root {
+  color-scheme: light;
+  --bg: #f0efec;
+  --surface-1: #fcfcfb;
+  --surface-user: #eef4fd;
+  --border: #e2e1dc;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #77766f;
+  --series-1: #2a78d6;
+  --track: #cde2fb;
+  --warning: #fab219;
+  --critical: #d03b3b;
+  --radius: 14px;
+  --font: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #121211;
+    --surface-1: #1a1a19;
+    --surface-user: #1f2b3d;
+    --border: #2e2e2b;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #8d8c82;
+    --series-1: #3987e5;
+    --track: #0d366b;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  block-size: 100dvh;
+  max-inline-size: 820px;
+  margin-inline: auto;
+  transition: outline-color 120ms ease;
+  outline: 2px dashed transparent;
+  outline-offset: -8px;
+}
+
+.app--dragging {
+  outline-color: color-mix(in oklab, var(--series-1) 45%, transparent);
+}
+
+/* Шапка */
+.header {
+  padding: 16px 20px 14px;
+  border-block-end: 1px solid var(--border);
+  background: var(--surface-1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mark {
+  inline-size: 30px;
+  block-size: 30px;
+  flex: none;
+  fill: var(--series-1);
+}
+
+.mark ellipse {
+  opacity: 0.85;
+}
+
+/* Сердцевина вырезана цветом поверхности: лепестки читаются как розетка,
+   а не как сплошное пятно. */
+.mark-core {
+  fill: var(--surface-1);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.chips {
+  list-style: none;
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 3px 9px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.chip--accent {
+  color: var(--series-1);
+  border-color: color-mix(in oklab, var(--series-1) 35%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.model-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.model-picker select {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.model-picker select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.model-single {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.header-meta {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.header-meta--warn {
+  display: flex;
+  gap: 6px;
+}
+
+.header-meta--warn span {
+  color: var(--warning);
+}
+
+/* Лента сообщений */
+.chat {
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.message {
+  display: flex;
+  animation: appear 220ms ease-out both;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message {
+    animation: none;
+  }
+}
+
+.system-note {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.message--user {
+  justify-content: flex-end;
+}
+
+.bubble {
+  max-inline-size: 85%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+
+.message--user .bubble {
+  background: var(--surface-user);
+  border-color: transparent;
+}
+
+.thumb {
+  display: block;
+  max-inline-size: 220px;
+  max-block-size: 220px;
+  border-radius: 8px;
+}
+
+.text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.thumb + .text {
+  margin-block-start: 8px;
+}
+
+.error {
+  color: var(--critical);
+}
+
+.pending {
+  color: var(--text-secondary);
+}
+
+.dots::after {
+  content: "…";
+  animation: blink 1.2s steps(1, end) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* Предсказание */
+/* Пузырь с предсказанием ужимается по содержимому, и полосы выходят
+   слишком короткими для чтения — задаём им минимальную длину. */
+.prediction {
+  min-inline-size: min(360px, 60vw);
+}
+
+.prediction .lead {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.prediction .lead strong {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.uncertain {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.uncertain span {
+  color: var(--warning);
+}
+
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label value"
+    "track track";
+  gap: 3px 10px;
+  align-items: baseline;
+}
+
+.bar-label {
+  grid-area: label;
+  font-size: 13px;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.bar-value {
+  grid-area: value;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.bar-track {
+  grid-area: track;
+  block-size: 10px;
+  background: var(--track);
+  border-radius: 0 4px 4px 0;
+  overflow: hidden;
+}
+
+.bar-fill {
+  display: block;
+  block-size: 100%;
+  background: var(--series-1);
+  border-radius: 0 4px 4px 0;
+}
+
+.meta {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Нижняя панель */
+.footer {
+  padding: 14px 20px 20px;
+  border-block-start: 1px solid var(--border);
+}
+
+.composer {
+  display: flex;
+}
+
+/* Зона перетаскивания: пунктир и крупная подпись делают механику
+   очевидной без объяснений — мелкая строка под кнопкой не читалась. */
+.dropzone {
+  inline-size: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 18px 20px;
+  font: inherit;
+  text-align: center;
+  background: color-mix(in oklab, var(--series-1) 4%, var(--surface-1));
+  border: 1.5px dashed color-mix(in oklab, var(--series-1) 38%, var(--border));
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.dropzone:hover:not(:disabled),
+.dropzone:focus-visible {
+  background: color-mix(in oklab, var(--series-1) 9%, var(--surface-1));
+  border-color: var(--series-1);
+}
+
+.dropzone--active {
+  background: color-mix(in oklab, var(--series-1) 14%, var(--surface-1));
+  border-style: solid;
+  border-color: var(--series-1);
+}
+
+.dropzone:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.dropzone-icon {
+  inline-size: 26px;
+  block-size: 26px;
+  color: var(--series-1);
+}
+
+.dropzone-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.dropzone-hint {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+kbd {
+  padding: 1px 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}

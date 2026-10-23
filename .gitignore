@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Модели целиком: обучаются в Colab, в репозиторий не кладём.
+# Папка остаётся в дереве ради .gitkeep, чтобы сервер знал, куда смотреть.
+model/*
+!model/.gitkeep
+
+# Фронтенд
+node_modules/
+frontend/dist/
+
+# IDE: настройки PyCharm локальные и содержат пути рабочей машины
+.idea/
+
+# Артефакты сборки пакета
+*.egg-info/

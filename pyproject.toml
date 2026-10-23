@@ -1,0 +1,38 @@
+[build-system]
+# Без явной секции build-system uv считает проект неустанавливаемым,
+# и пакет app не попадает в окружение после `uv sync`.
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "softlineproject"
+version = "0.1.0"
+description = "Классификатор видов цветов: ONNX-инференс на CPU и чат-интерфейс"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "python-multipart>=0.0.20",
+    "onnxruntime>=1.20",
+    "pillow>=11",
+    "numpy>=2",
+]
+
+# torch здесь намеренно отсутствует: обучение живёт в
+# notebooks/train_flowers102_colab.ipynb и выполняется в Colab,
+# а рантайму достаточно onnxruntime.
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "httpx>=0.28",   # TestClient
+    "onnx>=1.17",    # сборка игрушечной модели для тестов
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools]
+packages = ["app"]
