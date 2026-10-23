@@ -13,6 +13,8 @@ Russian.
 You need Python 3.11+, Node 20+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
+git clone https://github.com/issToma/what-the-flower.git
+cd what-the-flower
 uv sync
 cd frontend && npm install && npm run build && cd ..
 uv run uvicorn app.main:app --port 8000
